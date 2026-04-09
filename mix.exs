@@ -9,7 +9,18 @@ defmodule DietProject.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      dialyzer: dialyzer(),
+      test_coverage: [
+        summary: [threshold: 97],
+        ignore_modules: ignore_coverage_modules()
+      ]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [precommit: :test]
     ]
   end
 
@@ -26,6 +37,22 @@ defmodule DietProject.MixProject do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  # Test coverage configuration
+  defp ignore_coverage_modules do
+    {modules, _} = Code.eval_file(".test_coverage_ignore.exs")
+    modules
+  end
+
+  # Dialyzer configuration
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+      plt_add_apps: [:mix, :ex_unit],
+      flags: [:error_handling, :underspecs],
+      ignore_warnings: ".dialyzer_ignore.exs"
+    ]
+  end
 
   # Specifies your project dependencies.
   #
@@ -57,7 +84,12 @@ defmodule DietProject.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.8", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:money, "~> 1.13"}
     ]
   end
 
@@ -79,6 +111,16 @@ defmodule DietProject.MixProject do
         "tailwind diet_project --minify",
         "esbuild diet_project --minify",
         "phx.digest"
+      ],
+      precommit: [
+        "compile --warnings-as-errors",
+        "deps.unlock --check-unused",
+        "format --check-formatted",
+        "credo --strict",
+        "sobelow --skip -i Config.CSP --config",
+        "dialyzer --format github",
+        "test --cover",
+        "coverage.index"
       ]
     ]
   end
