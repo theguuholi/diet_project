@@ -507,4 +507,48 @@ defmodule DietProject.AccountsTest do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
     end
   end
+
+  describe "get_user_by_phone/1" do
+    test "does not return the user if the phone does not exist" do
+      refute Accounts.get_user_by_phone("+5511999999999")
+    end
+
+    test "returns the user if the phone exists" do
+      phone = unique_user_phone()
+      %{id: id} = user_fixture(%{phone: phone})
+      assert %User{id: ^id} = Accounts.get_user_by_phone(phone)
+    end
+  end
+
+  describe "user phone validation" do
+    test "accepts valid E.164 phone numbers" do
+      valid_attrs = valid_user_attributes(%{phone: "+5511999999999"})
+      assert {:ok, _user} = Accounts.register_user(valid_attrs)
+    end
+
+    test "accepts nil phone (phone is optional)" do
+      valid_attrs = valid_user_attributes(%{phone: nil})
+      assert {:ok, _user} = Accounts.register_user(valid_attrs)
+    end
+
+    test "rejects phone numbers without leading +" do
+      attrs = valid_user_attributes(%{phone: "5511999999999"})
+      {:error, changeset} = Accounts.register_user(attrs)
+      assert "must start with + and contain only digits" in errors_on(changeset).phone
+    end
+
+    test "rejects phone numbers with letters" do
+      attrs = valid_user_attributes(%{phone: "+551199ABCDEF"})
+      {:error, changeset} = Accounts.register_user(attrs)
+      assert "must start with + and contain only digits" in errors_on(changeset).phone
+    end
+
+    test "enforces uniqueness of phone" do
+      phone = unique_user_phone()
+      user_fixture(%{phone: phone})
+      attrs = valid_user_attributes(%{phone: phone})
+      {:error, changeset} = Accounts.register_user(attrs)
+      assert "has already been taken" in errors_on(changeset).phone
+    end
+  end
 end

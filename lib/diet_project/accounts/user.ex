@@ -9,6 +9,7 @@ defmodule DietProject.Accounts.User do
     field :hashed_password, :string, redact: true
     field :current_password, :string, virtual: true, redact: true
     field :confirmed_at, :utc_datetime
+    field :phone, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -38,9 +39,10 @@ defmodule DietProject.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:email, :password, :phone])
     |> validate_email(opts)
     |> validate_password(opts)
+    |> validate_phone()
   end
 
   defp validate_email(changeset, opts) do
@@ -76,6 +78,21 @@ defmodule DietProject.Accounts.User do
       |> delete_change(:password)
     else
       changeset
+    end
+  end
+
+  defp validate_phone(changeset) do
+    case get_change(changeset, :phone) do
+      nil ->
+        changeset
+
+      _phone ->
+        changeset
+        |> validate_format(:phone, ~r/^\+[0-9]+$/,
+          message: "must start with + and contain only digits"
+        )
+        |> unsafe_validate_unique(:phone, DietProject.Repo)
+        |> unique_constraint(:phone)
     end
   end
 

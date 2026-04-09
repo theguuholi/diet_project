@@ -29,6 +29,20 @@ defmodule DietProject.Accounts do
   end
 
   @doc """
+  Gets a user by phone number (E.164 format).
+
+  ## Examples
+
+      iex> DietProject.Accounts.get_user_by_phone("+5511999999999")
+      nil
+
+  """
+  @spec get_user_by_phone(phone :: String.t()) :: User.t() | nil
+  def get_user_by_phone(phone) when is_binary(phone) do
+    Repo.get_by(User, phone: phone)
+  end
+
+  @doc """
   Gets a user by email and password.
 
   ## Examples
