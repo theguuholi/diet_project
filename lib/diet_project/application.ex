@@ -14,9 +14,7 @@ defmodule DietProject.Application do
       {Phoenix.PubSub, name: DietProject.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: DietProject.Finch},
-      # Start a worker by calling: DietProject.Worker.start_link(arg)
-      # {DietProject.Worker, arg},
-      # Start to serve requests, typically the last entry
+      {Oban, Application.fetch_env!(:diet_project, Oban)},
       DietProjectWeb.Endpoint
     ]
 
