@@ -33,4 +33,30 @@ defmodule DietProject.AccountsFixtures do
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
     token
   end
+
+  def profile_fixture(user, attrs \\ %{}) do
+    {:ok, profile} =
+      attrs
+      |> Enum.into(%{
+        weight_kg: 80.0,
+        height_cm: 175.0,
+        body_fat_pct: 20.0,
+        activity_level: :moderate,
+        goal: :maintain,
+        bmr: 1752.4,
+        tdee: 2716.2
+      })
+      |> then(&DietProject.Accounts.create_profile(user, &1))
+
+    profile
+  end
+
+  def goals_fixture(user, attrs \\ %{}) do
+    {:ok, goals} =
+      attrs
+      |> Enum.into(%{calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 67})
+      |> then(&DietProject.Accounts.create_goals(user, &1))
+
+    goals
+  end
 end
