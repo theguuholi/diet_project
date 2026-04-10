@@ -57,7 +57,9 @@ defmodule DietProject.AI.WhisperClient do
 
   defp build_multipart(boundary, audio_binary) do
     sep = "--#{boundary}\r\n"
-    model_part = sep <> ~s(Content-Disposition: form-data; name="model"\r\n\r\n) <> "#{@model}\r\n"
+
+    model_part =
+      sep <> ~s(Content-Disposition: form-data; name="model"\r\n\r\n) <> "#{@model}\r\n"
 
     file_part =
       sep <>

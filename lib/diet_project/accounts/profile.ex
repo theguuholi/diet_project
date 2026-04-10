@@ -73,7 +73,10 @@ defmodule DietProject.Accounts.Profile do
     field :weight_kg, :float
     field :height_cm, :float
     field :body_fat_pct, :float
-    field :activity_level, Ecto.Enum, values: [:sedentary, :light, :moderate, :very_active, :extra_active]
+
+    field :activity_level, Ecto.Enum,
+      values: [:sedentary, :light, :moderate, :very_active, :extra_active]
+
     field :goal, Ecto.Enum, values: [:lose, :maintain, :gain]
     field :bmr, :float
     field :tdee, :float
@@ -93,7 +96,15 @@ defmodule DietProject.Accounts.Profile do
   def changeset(profile, attrs) do
     profile
     |> cast(attrs, [:weight_kg, :height_cm, :body_fat_pct, :activity_level, :goal, :bmr, :tdee])
-    |> validate_required([:weight_kg, :height_cm, :body_fat_pct, :activity_level, :goal, :bmr, :tdee])
+    |> validate_required([
+      :weight_kg,
+      :height_cm,
+      :body_fat_pct,
+      :activity_level,
+      :goal,
+      :bmr,
+      :tdee
+    ])
     |> validate_number(:weight_kg, greater_than: 0)
     |> validate_number(:height_cm, greater_than: 0)
     |> validate_number(:body_fat_pct, greater_than_or_equal_to: 0.0, less_than_or_equal_to: 100.0)

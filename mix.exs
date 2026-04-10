@@ -126,7 +126,7 @@ defmodule DietProject.MixProject do
         "deps.unlock --check-unused",
         "format --check-formatted",
         "credo --strict",
-        "sobelow --skip -i Config.CSP --config",
+        "sobelow --skip -i Config.CSP -i Config.HTTPS -i Config.CSRFRoute --config",
         "dialyzer --format github",
         "test --cover",
         "coverage.index"

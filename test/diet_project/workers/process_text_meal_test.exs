@@ -94,5 +94,26 @@ defmodule DietProject.Workers.ProcessTextMealTest do
                  "message" => "some food"
                })
     end
+
+    test "formats reply with goal context when user has goals set up" do
+      user = user_fixture()
+      DietProject.AccountsFixtures.goals_fixture(user)
+
+      DietProject.AI.ClaudeClientMock
+      |> expect(:extract_meal, fn "salad" -> {:ok, @food_items} end)
+
+      DietProject.Integrations.WhatsAppClientMock
+      |> expect(:send_message, fn _phone, message ->
+        assert message =~ "330"
+        :ok
+      end)
+
+      assert :ok =
+               perform_job(ProcessTextMeal, %{
+                 "user_id" => user.id,
+                 "phone" => "+5511999999998",
+                 "message" => "salad"
+               })
+    end
   end
 end

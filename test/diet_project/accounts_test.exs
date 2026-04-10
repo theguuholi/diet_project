@@ -7,7 +7,8 @@ defmodule DietProject.AccountsTest do
   alias DietProject.Accounts.User
   alias DietProject.Accounts.UserToken
 
-  doctest DietProject.Accounts, only: [calculate_bmr: 2, calculate_tdee: 2, default_macro_targets: 2]
+  doctest DietProject.Accounts,
+    only: [calculate_bmr: 2, calculate_tdee: 2, default_macro_targets: 2]
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do

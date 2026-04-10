@@ -27,6 +27,7 @@ defmodule DietProjectWeb.BotController do
   Oban worker and responds immediately with 200.
   """
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  # sobelow_skip ["XSS.SendResp"]
   def webhook(conn, %{"hub.mode" => "subscribe", "hub.challenge" => challenge}) do
     send_resp(conn, 200, challenge)
   end

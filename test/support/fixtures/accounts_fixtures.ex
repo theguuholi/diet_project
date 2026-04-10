@@ -5,11 +5,13 @@ defmodule DietProject.AccountsFixtures do
   """
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
+
   def unique_user_phone do
     n = :rand.uniform(9_999_999)
     suffix = n |> Integer.to_string() |> String.pad_leading(7, "0")
     "+551199#{suffix}"
   end
+
   def valid_user_password, do: "hello world!"
 
   def valid_user_attributes(attrs \\ %{}) do

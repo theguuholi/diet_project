@@ -66,7 +66,9 @@ defmodule DietProject.Accounts.MagicToken do
     raw_token = Base.url_encode64(raw_bytes, padding: false)
     token_hash = hash(raw_token)
     ttl_seconds = @token_ttl_minutes * 60
-    expires_at = DateTime.utc_now() |> DateTime.add(ttl_seconds, :second) |> DateTime.truncate(:second)
+
+    expires_at =
+      DateTime.utc_now() |> DateTime.add(ttl_seconds, :second) |> DateTime.truncate(:second)
 
     changeset =
       %__MODULE__{user_id: user.id}

@@ -48,7 +48,9 @@ defmodule DietProject.Billing.Subscription do
   def active_statuses, do: @active_statuses
 
   schema "subscriptions" do
-    field :status, Ecto.Enum, values: [:active, :trialing, :canceled, :past_due, :incomplete, :unpaid]
+    field :status, Ecto.Enum,
+      values: [:active, :trialing, :canceled, :past_due, :incomplete, :unpaid]
+
     field :current_period_end, :utc_datetime
     field :external_id, :string
 

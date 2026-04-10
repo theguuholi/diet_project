@@ -14,10 +14,20 @@ defmodule DietProject.NutritionTest do
 
       food_items = [
         valid_food_item_attrs(%{name: "Chicken breast", calories: 330.0}),
-        valid_food_item_attrs(%{name: "Brown rice", calories: 200.0, protein_g: 4.0, carbs_g: 45.0, fat_g: 1.0})
+        valid_food_item_attrs(%{
+          name: "Brown rice",
+          calories: 200.0,
+          protein_g: 4.0,
+          carbs_g: 45.0,
+          fat_g: 1.0
+        })
       ]
 
-      attrs = %{input_type: :text, raw_input: "chicken breast 200g and brown rice 150g", food_items: food_items}
+      attrs = %{
+        input_type: :text,
+        raw_input: "chicken breast 200g and brown rice 150g",
+        food_items: food_items
+      }
 
       assert {:ok, %Meal{} = meal} = Nutrition.create_meal(user.id, attrs)
       assert meal.user_id == user.id

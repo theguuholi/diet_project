@@ -150,6 +150,7 @@ defmodule DietProject.BotTest do
 
     test "invalid input stays in same state" do
       user = user_fixture()
+
       setup_state_at(user.id, :collecting_goal, %{
         "name" => "Dave",
         "weight_kg" => 75.0,
@@ -169,6 +170,34 @@ defmodule DietProject.BotTest do
 
       assert {:ok, %ConversationState{state: :collecting_weight}, response} =
                Bot.advance_state(user.id, "not a number")
+
+      assert response == "I didn't understand. Please try again."
+    end
+
+    test "collecting_weight with integer string advances to collecting_height" do
+      user = user_fixture()
+      setup_state_at(user.id, :collecting_weight)
+
+      assert {:ok, %ConversationState{state: :collecting_height}, _response} =
+               Bot.advance_state(user.id, "80")
+    end
+
+    test "collecting_height with invalid input stays in same state" do
+      user = user_fixture()
+      setup_state_at(user.id, :collecting_height)
+
+      assert {:ok, %ConversationState{state: :collecting_height}, response} =
+               Bot.advance_state(user.id, "not a number")
+
+      assert response == "I didn't understand. Please try again."
+    end
+
+    test "collecting_body_fat with invalid input stays in same state" do
+      user = user_fixture()
+      setup_state_at(user.id, :collecting_body_fat)
+
+      assert {:ok, %ConversationState{state: :collecting_body_fat}, response} =
+               Bot.advance_state(user.id, "banana")
 
       assert response == "I didn't understand. Please try again."
     end

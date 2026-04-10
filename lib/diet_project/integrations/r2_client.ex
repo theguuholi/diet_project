@@ -46,10 +46,11 @@ defmodule DietProject.Integrations.R2Client do
         region: "auto"
       )
 
-    operation = ExAws.S3.put_object(bucket, filename, binary,
-      content_type: content_type,
-      acl: :public_read
-    )
+    operation =
+      ExAws.S3.put_object(bucket, filename, binary,
+        content_type: content_type,
+        acl: :public_read
+      )
 
     case ExAws.request(operation, config) do
       {:ok, _} -> {:ok, "#{public_url}/#{filename}"}

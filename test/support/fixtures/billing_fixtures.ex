@@ -23,7 +23,8 @@ defmodule DietProject.BillingFixtures do
       attrs
       |> Enum.into(%{
         status: :active,
-        current_period_end: DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second),
+        current_period_end:
+          DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second),
         external_id: "sub_#{System.unique_integer([:positive])}"
       })
       |> then(&Billing.create_subscription(user, plan, &1))

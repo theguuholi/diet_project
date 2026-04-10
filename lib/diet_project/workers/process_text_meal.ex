@@ -54,7 +54,12 @@ defmodule DietProject.Workers.ProcessTextMeal do
 
   defp process_meal(user, phone, message) do
     with {:ok, food_items} <- AI.extract_meal(message),
-         {:ok, meal} <- Nutrition.create_meal(user.id, %{input_type: :text, raw_input: message, food_items: food_items}),
+         {:ok, meal} <-
+           Nutrition.create_meal(user.id, %{
+             input_type: :text,
+             raw_input: message,
+             food_items: food_items
+           }),
          date = DateTime.to_date(meal.logged_at),
          {:ok, macro_log} <- Nutrition.update_macro_log(user.id, date) do
       :ok = Nutrition.broadcast_meal_logged(user.id, meal)

@@ -155,7 +155,12 @@ defmodule DietProject.Bot do
         update_state(state, :collecting_height, ctx, "Got it! What's your height in cm?")
 
       :error ->
-        update_state(state, :collecting_weight, state.context, "I didn't understand. Please try again.")
+        update_state(
+          state,
+          :collecting_weight,
+          state.context,
+          "I didn't understand. Please try again."
+        )
     end
   end
 
@@ -166,7 +171,12 @@ defmodule DietProject.Bot do
         update_state(state, :collecting_body_fat, ctx, "What's your body fat percentage?")
 
       :error ->
-        update_state(state, :collecting_height, state.context, "I didn't understand. Please try again.")
+        update_state(
+          state,
+          :collecting_height,
+          state.context,
+          "I didn't understand. Please try again."
+        )
     end
   end
 
@@ -177,7 +187,12 @@ defmodule DietProject.Bot do
         update_state(state, :collecting_goal, ctx, "What's your goal? (lose/maintain/gain)")
 
       :error ->
-        update_state(state, :collecting_body_fat, state.context, "I didn't understand. Please try again.")
+        update_state(
+          state,
+          :collecting_body_fat,
+          state.context,
+          "I didn't understand. Please try again."
+        )
     end
   end
 
@@ -194,7 +209,12 @@ defmodule DietProject.Bot do
         "What's your activity level? (sedentary/light/moderate/active/very_active)"
       )
     else
-      update_state(state, :collecting_goal, state.context, "I didn't understand. Please try again.")
+      update_state(
+        state,
+        :collecting_goal,
+        state.context,
+        "I didn't understand. Please try again."
+      )
     end
   end
 
@@ -216,9 +236,19 @@ defmodule DietProject.Bot do
 
   defp do_transition(%ConversationState{state: :awaiting_confirmation} = state, input) do
     case String.downcase(input) do
-      "yes" -> update_state(state, :idle, %{}, "Confirmed!")
-      "no" -> update_state(state, :idle, %{}, "Cancelled.")
-      _ -> update_state(state, :awaiting_confirmation, state.context, "I didn't understand. Please try again.")
+      "yes" ->
+        update_state(state, :idle, %{}, "Confirmed!")
+
+      "no" ->
+        update_state(state, :idle, %{}, "Cancelled.")
+
+      _ ->
+        update_state(
+          state,
+          :awaiting_confirmation,
+          state.context,
+          "I didn't understand. Please try again."
+        )
     end
   end
 
@@ -270,8 +300,12 @@ defmodule DietProject.Bot do
 
   defp parse_float(input) do
     case Float.parse(input) do
-      {value, ""} -> {:ok, value}
-      {value, rest} when rest in ["", " "] -> {:ok, value}
+      {value, ""} ->
+        {:ok, value}
+
+      {value, rest} when rest in ["", " "] ->
+        {:ok, value}
+
       _ ->
         case Integer.parse(input) do
           {value, ""} -> {:ok, value * 1.0}

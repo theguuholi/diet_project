@@ -63,7 +63,9 @@ defmodule DietProject.BillingTest do
     test "returns error with invalid attributes" do
       user = user_fixture()
       plan = plan_fixture()
-      assert {:error, %Ecto.Changeset{}} = Billing.create_subscription(user, plan, %{status: :invalid_status})
+
+      assert {:error, %Ecto.Changeset{}} =
+               Billing.create_subscription(user, plan, %{status: :invalid_status})
     end
   end
 

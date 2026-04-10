@@ -1,8 +1,32 @@
 defmodule DietProject.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+
+  @typedoc "Internal UUID primary key (nil before insert)"
+  @type id :: Ecto.UUID.t() | nil
+
+  @typedoc "Email address"
+  @type email :: String.t()
+
+  @typedoc "E.164 phone number for WhatsApp, e.g. +5511999990000"
+  @type phone :: String.t() | nil
+
+  @typedoc "UTC timestamp of first confirmed login"
+  @type confirmed_at :: DateTime.t() | nil
+
+  @type t :: %__MODULE__{
+          id: id(),
+          email: email(),
+          phone: phone(),
+          hashed_password: String.t() | nil,
+          confirmed_at: confirmed_at(),
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
+
   schema "users" do
     field :email, :string
     field :password, :string, virtual: true, redact: true

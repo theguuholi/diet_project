@@ -112,13 +112,16 @@ defmodule DietProject.Billing do
           {:ok, Subscription.t()} | {:error, term()} | :ok
   def handle_stripe_webhook(%{"type" => type, "data" => %{"object" => object}}) do
     case type do
-      event_type when event_type in ["customer.subscription.updated", "customer.subscription.deleted"] ->
+      event_type
+      when event_type in ["customer.subscription.updated", "customer.subscription.deleted"] ->
         handle_subscription_event(object)
 
       _ ->
         :ok
     end
   end
+
+  def handle_stripe_webhook(_event), do: :ok
 
   # --- Private helpers ---
 
