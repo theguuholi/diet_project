@@ -23,10 +23,13 @@ defmodule DietProjectWeb.Router do
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", DietProjectWeb do
-  #   pipe_through :api
-  # end
+  # Webhooks — no CSRF, no browser session
+  scope "/webhooks", DietProjectWeb do
+    pipe_through :api
+
+    get "/whatsapp", BotController, :webhook
+    post "/whatsapp", BotController, :webhook
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:diet_project, :dev_routes) do
