@@ -39,4 +39,28 @@ defmodule DietProjectWeb.UserSessionController do
     |> put_flash(:info, "Logged out successfully.")
     |> UserAuth.log_out_user()
   end
+
+  @doc """
+  Validates a magic link token, creates a session, and redirects to the dashboard.
+
+  On invalid or expired tokens, redirects to the login page with an error flash.
+  """
+  def magic_link(conn, %{"token" => token}) do
+    case Accounts.verify_magic_link_token(token) do
+      {:ok, user} ->
+        conn
+        |> put_flash(:info, "Logged in successfully.")
+        |> UserAuth.log_in_user(user, %{})
+
+      {:error, :expired} ->
+        conn
+        |> put_flash(:error, "The magic link has expired. Please request a new one.")
+        |> redirect(to: ~p"/users/log_in")
+
+      {:error, :invalid} ->
+        conn
+        |> put_flash(:error, "The magic link is invalid.")
+        |> redirect(to: ~p"/users/log_in")
+    end
+  end
 end

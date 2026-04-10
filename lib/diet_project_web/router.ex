@@ -23,10 +23,14 @@ defmodule DietProjectWeb.Router do
     get "/", PageController, :home
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", DietProjectWeb do
-  #   pipe_through :api
-  # end
+  # Webhooks — no CSRF, no browser session
+  scope "/webhooks", DietProjectWeb do
+    pipe_through :api
+
+    get "/whatsapp", BotController, :webhook
+    post "/whatsapp", BotController, :webhook
+    post "/stripe", BillingController, :webhook
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:diet_project, :dev_routes) do
@@ -68,7 +72,15 @@ defmodule DietProjectWeb.Router do
       on_mount: [{DietProjectWeb.UserAuth, :ensure_authenticated}] do
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
+      live "/dashboard", DashboardLive.Index, :index
     end
+  end
+
+  # Magic link login (no CSRF needed — token is single-use and short-lived)
+  scope "/auth", DietProjectWeb do
+    pipe_through :browser
+
+    get "/:token", UserSessionController, :magic_link
   end
 
   scope "/", DietProjectWeb do

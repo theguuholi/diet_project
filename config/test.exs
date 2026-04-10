@@ -38,3 +38,13 @@ config :phoenix, :plug_init_mode, :runtime
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
+
+# Oban — disable queues and use inline testing mode
+config :diet_project, Oban, testing: :inline
+
+# AI + Integrations — use Mox adapters in tests
+config :diet_project,
+  claude_client: DietProject.AI.ClaudeClientMock,
+  whisper_client: DietProject.AI.WhisperClientMock,
+  r2_client: DietProject.Integrations.R2ClientMock,
+  whatsapp_client: DietProject.Integrations.WhatsAppClientMock

@@ -7,6 +7,9 @@ defmodule DietProject.AccountsTest do
   alias DietProject.Accounts.User
   alias DietProject.Accounts.UserToken
 
+  doctest DietProject.Accounts,
+    only: [calculate_bmr: 2, calculate_tdee: 2, default_macro_targets: 2]
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")
@@ -505,6 +508,314 @@ defmodule DietProject.AccountsTest do
   describe "inspect/2 for the User module" do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
+    end
+  end
+
+  describe "get_user_by_phone/1" do
+    test "does not return the user if the phone does not exist" do
+      refute Accounts.get_user_by_phone("+5511999999999")
+    end
+
+    test "returns the user if the phone exists" do
+      phone = unique_user_phone()
+      %{id: id} = user_fixture(%{phone: phone})
+      assert %User{id: ^id} = Accounts.get_user_by_phone(phone)
+    end
+  end
+
+  describe "user phone validation" do
+    test "accepts valid E.164 phone numbers" do
+      valid_attrs = valid_user_attributes(%{phone: "+5511999999999"})
+      assert {:ok, _user} = Accounts.register_user(valid_attrs)
+    end
+
+    test "accepts nil phone (phone is optional)" do
+      valid_attrs = valid_user_attributes(%{phone: nil})
+      assert {:ok, _user} = Accounts.register_user(valid_attrs)
+    end
+
+    test "rejects phone numbers without leading +" do
+      attrs = valid_user_attributes(%{phone: "5511999999999"})
+      {:error, changeset} = Accounts.register_user(attrs)
+      assert "must start with + and contain only digits" in errors_on(changeset).phone
+    end
+
+    test "rejects phone numbers with letters" do
+      attrs = valid_user_attributes(%{phone: "+551199ABCDEF"})
+      {:error, changeset} = Accounts.register_user(attrs)
+      assert "must start with + and contain only digits" in errors_on(changeset).phone
+    end
+
+    test "enforces uniqueness of phone" do
+      phone = unique_user_phone()
+      user_fixture(%{phone: phone})
+      attrs = valid_user_attributes(%{phone: phone})
+      {:error, changeset} = Accounts.register_user(attrs)
+      assert "has already been taken" in errors_on(changeset).phone
+    end
+  end
+
+  describe "calculate_bmr/2" do
+    test "calculates BMR correctly for 80kg at 20% body fat" do
+      assert Accounts.calculate_bmr(80.0, 20.0) == 1752.4
+    end
+
+    test "calculates BMR correctly for 60kg at 15% body fat" do
+      assert Accounts.calculate_bmr(60.0, 15.0) == 1471.6
+    end
+
+    test "calculates BMR with 0% body fat (all lean mass)" do
+      assert Accounts.calculate_bmr(70.0, 0.0) == Float.round(370 + 21.6 * 70.0, 1)
+    end
+  end
+
+  describe "calculate_tdee/2" do
+    test "sedentary multiplier is 1.2" do
+      bmr = 1752.4
+      assert Accounts.calculate_tdee(bmr, :sedentary) == Float.round(bmr * 1.2, 1)
+    end
+
+    test "light multiplier is 1.375" do
+      bmr = 1752.4
+      assert Accounts.calculate_tdee(bmr, :light) == Float.round(bmr * 1.375, 1)
+    end
+
+    test "moderate multiplier is 1.55" do
+      bmr = 1752.4
+      assert Accounts.calculate_tdee(bmr, :moderate) == Float.round(bmr * 1.55, 1)
+    end
+
+    test "active multiplier is 1.725" do
+      bmr = 1752.4
+      assert Accounts.calculate_tdee(bmr, :active) == Float.round(bmr * 1.725, 1)
+    end
+
+    test "very_active multiplier is 1.725" do
+      bmr = 1752.4
+      assert Accounts.calculate_tdee(bmr, :very_active) == Float.round(bmr * 1.725, 1)
+    end
+
+    test "extra_active multiplier is 1.9" do
+      bmr = 1752.4
+      assert Accounts.calculate_tdee(bmr, :extra_active) == Float.round(bmr * 1.9, 1)
+    end
+  end
+
+  describe "default_macro_targets/2" do
+    test "lose goal splits 35% protein, 35% carbs, 30% fat" do
+      targets = Accounts.default_macro_targets(2000, :lose)
+      assert targets.protein_g == trunc(round(2000 * 0.35 / 4))
+      assert targets.carbs_g == trunc(round(2000 * 0.35 / 4))
+      assert targets.fat_g == trunc(round(2000 * 0.30 / 9))
+    end
+
+    test "maintain goal splits 30% protein, 40% carbs, 30% fat" do
+      targets = Accounts.default_macro_targets(2500, :maintain)
+      assert targets.protein_g == trunc(round(2500 * 0.30 / 4))
+      assert targets.carbs_g == trunc(round(2500 * 0.40 / 4))
+      assert targets.fat_g == trunc(round(2500 * 0.30 / 9))
+    end
+
+    test "gain goal splits 30% protein, 45% carbs, 25% fat" do
+      targets = Accounts.default_macro_targets(3000, :gain)
+      assert targets.protein_g == trunc(round(3000 * 0.30 / 4))
+      assert targets.carbs_g == trunc(round(3000 * 0.45 / 4))
+      assert targets.fat_g == trunc(round(3000 * 0.25 / 9))
+    end
+
+    test "returns a map with calories key equal to the input" do
+      targets = Accounts.default_macro_targets(2000, :maintain)
+      assert targets.calories == 2000
+    end
+  end
+
+  describe "create_profile/2" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "creates a profile with valid attributes", %{user: user} do
+      attrs = %{
+        weight_kg: 80.0,
+        height_cm: 175.0,
+        body_fat_pct: 20.0,
+        activity_level: :moderate,
+        goal: :maintain,
+        bmr: 1748.8,
+        tdee: 2710.6
+      }
+
+      assert {:ok, profile} = Accounts.create_profile(user, attrs)
+      assert profile.user_id == user.id
+      assert profile.weight_kg == 80.0
+      assert profile.activity_level == :moderate
+      assert profile.goal == :maintain
+    end
+
+    test "requires all mandatory fields", %{user: user} do
+      {:error, changeset} = Accounts.create_profile(user, %{})
+
+      assert %{
+               weight_kg: ["can't be blank"],
+               height_cm: ["can't be blank"],
+               body_fat_pct: ["can't be blank"],
+               activity_level: ["can't be blank"],
+               goal: ["can't be blank"],
+               bmr: ["can't be blank"],
+               tdee: ["can't be blank"]
+             } = errors_on(changeset)
+    end
+
+    test "rejects non-positive weight_kg", %{user: user} do
+      attrs = %{
+        weight_kg: -1.0,
+        height_cm: 175.0,
+        body_fat_pct: 20.0,
+        activity_level: :moderate,
+        goal: :maintain,
+        bmr: 1748.8,
+        tdee: 2710.6
+      }
+
+      {:error, changeset} = Accounts.create_profile(user, attrs)
+      assert "must be greater than 0" in errors_on(changeset).weight_kg
+    end
+
+    test "rejects body_fat_pct above 100", %{user: user} do
+      attrs = %{
+        weight_kg: 80.0,
+        height_cm: 175.0,
+        body_fat_pct: 101.0,
+        activity_level: :moderate,
+        goal: :maintain,
+        bmr: 1748.8,
+        tdee: 2710.6
+      }
+
+      {:error, changeset} = Accounts.create_profile(user, attrs)
+      assert "must be less than or equal to 100.0" in errors_on(changeset).body_fat_pct
+    end
+
+    test "rejects invalid activity_level enum", %{user: user} do
+      attrs = %{
+        weight_kg: 80.0,
+        height_cm: 175.0,
+        body_fat_pct: 20.0,
+        activity_level: :invalid,
+        goal: :maintain,
+        bmr: 1748.8,
+        tdee: 2710.6
+      }
+
+      {:error, changeset} = Accounts.create_profile(user, attrs)
+      assert "is invalid" in errors_on(changeset).activity_level
+    end
+
+    test "rejects invalid goal enum", %{user: user} do
+      attrs = %{
+        weight_kg: 80.0,
+        height_cm: 175.0,
+        body_fat_pct: 20.0,
+        activity_level: :moderate,
+        goal: :invalid,
+        bmr: 1748.8,
+        tdee: 2710.6
+      }
+
+      {:error, changeset} = Accounts.create_profile(user, attrs)
+      assert "is invalid" in errors_on(changeset).goal
+    end
+  end
+
+  describe "get_profile/1" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "returns nil when user has no profile", %{user: user} do
+      assert Accounts.get_profile(user) == nil
+    end
+
+    test "returns the profile when it exists", %{user: user} do
+      profile = profile_fixture(user)
+      fetched = Accounts.get_profile(user)
+      assert fetched.id == profile.id
+      assert fetched.user_id == user.id
+    end
+  end
+
+  describe "update_profile/3" do
+    setup do
+      user = user_fixture()
+      profile = profile_fixture(user)
+      %{user: user, profile: profile}
+    end
+
+    test "updates the profile with valid attributes", %{user: user, profile: profile} do
+      {:ok, updated} = Accounts.update_profile(user, profile, %{weight_kg: 75.0, bmr: 1680.0})
+      assert updated.weight_kg == 75.0
+      assert updated.bmr == 1680.0
+    end
+
+    test "returns error changeset for invalid attributes", %{user: user, profile: profile} do
+      {:error, changeset} =
+        Accounts.update_profile(user, profile, %{weight_kg: -5.0})
+
+      assert "must be greater than 0" in errors_on(changeset).weight_kg
+    end
+  end
+
+  describe "create_goals/2" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "creates goals with valid attributes", %{user: user} do
+      attrs = %{calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 67}
+      assert {:ok, goals} = Accounts.create_goals(user, attrs)
+      assert goals.user_id == user.id
+      assert goals.calories == 2000
+      assert goals.protein_g == 150
+    end
+
+    test "requires all mandatory fields", %{user: user} do
+      {:error, changeset} = Accounts.create_goals(user, %{})
+
+      assert %{
+               calories: ["can't be blank"],
+               protein_g: ["can't be blank"],
+               carbs_g: ["can't be blank"],
+               fat_g: ["can't be blank"]
+             } = errors_on(changeset)
+    end
+
+    test "rejects non-positive calories", %{user: user} do
+      attrs = %{calories: -100, protein_g: 150, carbs_g: 200, fat_g: 67}
+      {:error, changeset} = Accounts.create_goals(user, attrs)
+      assert "must be greater than 0" in errors_on(changeset).calories
+    end
+
+    test "rejects non-positive protein_g", %{user: user} do
+      attrs = %{calories: 2000, protein_g: 0, carbs_g: 200, fat_g: 67}
+      {:error, changeset} = Accounts.create_goals(user, attrs)
+      assert "must be greater than 0" in errors_on(changeset).protein_g
+    end
+  end
+
+  describe "get_goals/1" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "returns nil when user has no goals", %{user: user} do
+      assert Accounts.get_goals(user) == nil
+    end
+
+    test "returns goals when they exist", %{user: user} do
+      goals = goals_fixture(user)
+      fetched = Accounts.get_goals(user)
+      assert fetched.id == goals.id
+      assert fetched.user_id == user.id
     end
   end
 end

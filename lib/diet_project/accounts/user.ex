@@ -1,14 +1,39 @@
 defmodule DietProject.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+
+  @typedoc "Internal UUID primary key (nil before insert)"
+  @type id :: Ecto.UUID.t() | nil
+
+  @typedoc "Email address"
+  @type email :: String.t()
+
+  @typedoc "E.164 phone number for WhatsApp, e.g. +5511999990000"
+  @type phone :: String.t() | nil
+
+  @typedoc "UTC timestamp of first confirmed login"
+  @type confirmed_at :: DateTime.t() | nil
+
+  @type t :: %__MODULE__{
+          id: id(),
+          email: email(),
+          phone: phone(),
+          hashed_password: String.t() | nil,
+          confirmed_at: confirmed_at(),
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
+
   schema "users" do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :current_password, :string, virtual: true, redact: true
     field :confirmed_at, :utc_datetime
+    field :phone, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -38,9 +63,10 @@ defmodule DietProject.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:email, :password, :phone])
     |> validate_email(opts)
     |> validate_password(opts)
+    |> validate_phone()
   end
 
   defp validate_email(changeset, opts) do
@@ -76,6 +102,21 @@ defmodule DietProject.Accounts.User do
       |> delete_change(:password)
     else
       changeset
+    end
+  end
+
+  defp validate_phone(changeset) do
+    case get_change(changeset, :phone) do
+      nil ->
+        changeset
+
+      _phone ->
+        changeset
+        |> validate_format(:phone, ~r/^\+[0-9]+$/,
+          message: "must start with + and contain only digits"
+        )
+        |> unsafe_validate_unique(:phone, DietProject.Repo)
+        |> unique_constraint(:phone)
     end
   end
 

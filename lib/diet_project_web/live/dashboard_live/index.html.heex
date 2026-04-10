@@ -1,0 +1,35 @@
+<main class="mx-auto max-w-3xl px-4 py-8 space-y-8">
+  <header class="mb-2">
+    <h1 class="text-2xl font-bold text-gray-900">Daily Dashboard</h1>
+    <p class="text-sm text-gray-500">
+      <time datetime={Date.to_iso8601(@today)}>
+        {Calendar.strftime(@today, "%B %d, %Y")}
+      </time>
+    </p>
+  </header>
+
+  <section aria-label="Macro summary" id="macro-summary">
+    <.live_component
+      module={DietProjectWeb.DashboardLive.MacroSummaryComponent}
+      id="macro-summary-component"
+      summary={@summary}
+      goals={@goals}
+    />
+  </section>
+
+  <section aria-label="Meal list" id="meal-list">
+    <.live_component
+      module={DietProjectWeb.DashboardLive.MealListComponent}
+      id="meal-list-component"
+      meals={@meals}
+    />
+  </section>
+
+  <section aria-label="Weekly chart" id="weekly-chart">
+    <.live_component
+      module={DietProjectWeb.DashboardLive.WeeklyChartComponent}
+      id="weekly-chart-component"
+      user_id={@current_user.id}
+    />
+  </section>
+</main>
