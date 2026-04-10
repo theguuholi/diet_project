@@ -12,6 +12,7 @@ defmodule DietProject.Accounts do
   alias DietProject.Repo
 
   alias DietProject.Accounts.Goals
+  alias DietProject.Accounts.MagicToken
   alias DietProject.Accounts.Profile
   alias DietProject.Accounts.User
   alias DietProject.Accounts.UserNotifier
@@ -579,5 +580,61 @@ defmodule DietProject.Accounts do
   @spec get_goals(user :: User.t()) :: Goals.t() | nil
   def get_goals(user) do
     Repo.get_by(Goals, user_id: user.id)
+  end
+
+  ## Magic Link Auth
+
+  @doc """
+  Generates a magic link token for the given user and returns the raw token
+  string to embed in the login URL.
+
+  The hashed token is stored in the database with a 15-minute expiry.
+
+  ## Examples
+
+      iex> user = %DietProject.Accounts.User{id: "some-uuid"}
+      iex> token = DietProject.Accounts.generate_magic_link_token(user)
+      iex> is_binary(token)
+      true
+
+  """
+  @spec generate_magic_link_token(user :: User.t()) :: String.t()
+  def generate_magic_link_token(user) do
+    {raw_token, changeset} = MagicToken.build(user)
+    Repo.insert!(changeset)
+    raw_token
+  end
+
+  @doc """
+  Verifies a magic link token, deletes it from the DB if valid, and returns
+  the associated user.
+
+  Returns `{:ok, user}` on success, or `{:error, :invalid}` / `{:error, :expired}`
+  on failure.
+
+  ## Examples
+
+      iex> DietProject.Accounts.verify_magic_link_token("nonexistent-token")
+      {:error, :invalid}
+
+  """
+  @spec verify_magic_link_token(raw_token :: String.t()) ::
+          {:ok, User.t()} | {:error, :invalid | :expired}
+  def verify_magic_link_token(raw_token) do
+    hash = MagicToken.hash(raw_token)
+
+    case Repo.get_by(MagicToken, token_hash: hash) do
+      nil ->
+        {:error, :invalid}
+
+      token ->
+        Repo.delete!(token)
+
+        if DateTime.compare(token.expires_at, DateTime.utc_now()) == :gt do
+          {:ok, Repo.get!(User, token.user_id)}
+        else
+          {:error, :expired}
+        end
+    end
   end
 end

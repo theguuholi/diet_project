@@ -74,6 +74,13 @@ defmodule DietProjectWeb.Router do
     end
   end
 
+  # Magic link login (no CSRF needed — token is single-use and short-lived)
+  scope "/auth", DietProjectWeb do
+    pipe_through :browser
+
+    get "/:token", UserSessionController, :magic_link
+  end
+
   scope "/", DietProjectWeb do
     pipe_through [:browser]
 
