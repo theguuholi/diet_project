@@ -123,6 +123,23 @@ defmodule DietProject.BillingTest do
       event = %{"type" => "payment_intent.created", "data" => %{"object" => %{}}}
       assert :ok = Billing.handle_stripe_webhook(event)
     end
+
+    test "returns error for unknown Stripe status string" do
+      user = user_fixture()
+      plan = plan_fixture()
+
+      sub =
+        subscription_fixture(user, plan, %{status: :active, external_id: "sub_unknown_status"})
+
+      event = %{
+        "type" => "customer.subscription.updated",
+        "data" => %{
+          "object" => %{"id" => sub.external_id, "status" => "incomplete_expired"}
+        }
+      }
+
+      assert {:error, :unknown_status} = Billing.handle_stripe_webhook(event)
+    end
   end
 
   describe "Plans" do

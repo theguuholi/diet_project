@@ -38,7 +38,9 @@ defmodule DietProjectWeb.DashboardLive.MealListComponent do
               {Calendar.strftime(meal.logged_at, "%H:%M")}
             </span>
           </div>
-          <span class="text-xs font-medium text-gray-500 uppercase">{meal.input_type}</span>
+          <span class="text-xs font-medium text-gray-500">
+            {round(Enum.sum(Enum.map(meal.food_items, & &1.calories)))} kcal
+          </span>
         </li>
       </ul>
 

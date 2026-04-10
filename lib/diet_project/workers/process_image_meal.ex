@@ -38,7 +38,12 @@ defmodule DietProject.Workers.ProcessImageMeal do
          {:ok, _url} <- Integrations.upload(filename, binary, "image/jpeg"),
          base64 = Base.encode64(binary),
          {:ok, food_items} <- AI.analyze_image(base64),
-         {:ok, _state} <- Bot.set_awaiting_confirmation(user_id, %{"food_items" => food_items}) do
+         {:ok, _state} <-
+           Bot.set_awaiting_confirmation(user_id, %{
+             "food_items" => food_items,
+             "user_id" => user_id,
+             "phone" => phone
+           }) do
       confirmation_prompt = build_confirmation_prompt(food_items)
       Integrations.send_message(phone, confirmation_prompt)
     end

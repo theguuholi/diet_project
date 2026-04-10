@@ -441,6 +441,7 @@ defmodule DietProject.Accounts do
   defp activity_multiplier(:sedentary), do: 1.2
   defp activity_multiplier(:light), do: 1.375
   defp activity_multiplier(:moderate), do: 1.55
+  defp activity_multiplier(:active), do: 1.725
   defp activity_multiplier(:very_active), do: 1.725
   defp activity_multiplier(:extra_active), do: 1.9
 
@@ -628,9 +629,8 @@ defmodule DietProject.Accounts do
         {:error, :invalid}
 
       token ->
-        Repo.delete!(token)
-
         if DateTime.compare(token.expires_at, DateTime.utc_now()) == :gt do
+          Repo.delete!(token)
           {:ok, Repo.get!(User, token.user_id)}
         else
           {:error, :expired}

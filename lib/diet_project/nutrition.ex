@@ -111,17 +111,12 @@ defmodule DietProject.Nutrition do
           result
       end
 
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    attrs =
-      totals
-      |> Map.put(:date, date)
-      |> Map.put(:updated_at, now)
+    attrs = Map.put(totals, :date, date)
 
     %MacroLog{user_id: user_id}
     |> MacroLog.changeset(attrs)
     |> Repo.insert(
-      on_conflict: {:replace, [:calories, :protein_g, :carbs_g, :fat_g, :updated_at]},
+      on_conflict: {:replace, [:calories, :protein_g, :carbs_g, :fat_g]},
       conflict_target: [:user_id, :date]
     )
   end

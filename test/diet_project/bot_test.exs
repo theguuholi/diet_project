@@ -1,7 +1,10 @@
 defmodule DietProject.BotTest do
   use DietProject.DataCase
 
+  import Mox
   import DietProject.AccountsFixtures
+
+  setup :verify_on_exit!
 
   alias DietProject.Accounts
   alias DietProject.Bot
@@ -128,7 +131,7 @@ defmodule DietProject.BotTest do
       assert response =~ "kcal"
     end
 
-    test "awaiting_confirmation + 'yes' → idle, confirmed" do
+    test "awaiting_confirmation + 'yes' → idle, confirmed (no food_items)" do
       user = user_fixture()
       {:ok, _} = Bot.set_awaiting_confirmation(user.id, %{"food" => "rice"})
 
@@ -136,6 +139,35 @@ defmodule DietProject.BotTest do
                Bot.advance_state(user.id, "yes")
 
       assert response == "Confirmed!"
+    end
+
+    test "awaiting_confirmation + 'yes' with food_items → persists meal and returns confirmed" do
+      user = user_fixture()
+
+      DietProject.Integrations.WhatsAppClientMock
+      |> expect(:send_message, fn _phone, _msg -> {:ok, %{}} end)
+
+      food_items = [
+        %{
+          "name" => "pizza",
+          "calories" => 800.0,
+          "protein_g" => 25.0,
+          "carbs_g" => 100.0,
+          "fat_g" => 30.0,
+          "quantity" => 1.0,
+          "unit" => "slice"
+        }
+      ]
+
+      {:ok, _} =
+        Bot.set_awaiting_confirmation(user.id, %{
+          "food_items" => food_items,
+          "user_id" => user.id,
+          "phone" => user.phone
+        })
+
+      assert {:ok, %ConversationState{state: :idle}, "Confirmed!"} =
+               Bot.advance_state(user.id, "yes")
     end
 
     test "awaiting_confirmation + 'no' → idle, cancelled" do

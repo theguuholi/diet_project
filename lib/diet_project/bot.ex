@@ -7,16 +7,20 @@ defmodule DietProject.Bot do
   exposes an FSM-driven API used by Oban workers to handle incoming WhatsApp
   messages.
 
-  Contexts do not call each other directly — the Bot context is an exception
-  in that it calls `DietProject.Accounts` to persist the user profile when
-  onboarding completes, because profile creation is an integral part of the
-  bot flow and there is no intermediate domain event needed.
+  Contexts do not call each other directly — the Bot context makes two
+  documented exceptions: it calls `DietProject.Accounts` to persist the user
+  profile when onboarding completes, and it calls `DietProject.Nutrition` and
+  `DietProject.Integrations` to persist confirmed image meals when the user
+  replies "yes" to the confirmation prompt. Both cross-context calls are
+  integral to the bot flow and require no intermediate domain event.
   """
 
   import Ecto.Query, warn: false
 
   alias DietProject.Accounts
   alias DietProject.Bot.ConversationState
+  alias DietProject.Integrations
+  alias DietProject.Nutrition
   alias DietProject.Repo
 
   @activity_levels ["sedentary", "light", "moderate", "active", "very_active"]
@@ -59,8 +63,9 @@ defmodule DietProject.Bot do
   @spec advance_state(user_id :: binary(), input :: String.t()) ::
           {:ok, ConversationState.t(), String.t()} | {:error, term()}
   def advance_state(user_id, input) do
-    {:ok, state} = get_or_create_state(user_id)
-    do_transition(state, String.trim(input))
+    with {:ok, state} <- get_or_create_state(user_id) do
+      do_transition(state, String.trim(input))
+    end
   end
 
   @doc """
@@ -78,14 +83,14 @@ defmodule DietProject.Bot do
   @spec set_awaiting_confirmation(user_id :: binary(), food_data :: map()) ::
           {:ok, ConversationState.t()} | {:error, term()}
   def set_awaiting_confirmation(user_id, food_data) do
-    {:ok, state} = get_or_create_state(user_id)
-
-    state
-    |> ConversationState.changeset(%{
-      state: :awaiting_confirmation,
-      context: Map.put(state.context, "food_data", food_data)
-    })
-    |> Repo.update()
+    with {:ok, state} <- get_or_create_state(user_id) do
+      state
+      |> ConversationState.changeset(%{
+        state: :awaiting_confirmation,
+        context: Map.put(state.context, "food_data", food_data)
+      })
+      |> Repo.update()
+    end
   end
 
   @doc """
@@ -237,6 +242,7 @@ defmodule DietProject.Bot do
   defp do_transition(%ConversationState{state: :awaiting_confirmation} = state, input) do
     case String.downcase(input) do
       "yes" ->
+        maybe_persist_image_meal(state)
         update_state(state, :idle, %{}, "Confirmed!")
 
       "no" ->
@@ -255,6 +261,28 @@ defmodule DietProject.Bot do
   defp do_transition(state, _input) do
     update_state(state, state.state, state.context, "I didn't understand. Please try again.")
   end
+
+  defp maybe_persist_image_meal(%ConversationState{
+         context: %{
+           "food_data" => %{"food_items" => food_items, "user_id" => user_id, "phone" => phone}
+         }
+       }) do
+    case Nutrition.create_meal(user_id, %{
+           input_type: :photo,
+           raw_input: "image",
+           food_items: food_items
+         }) do
+      {:ok, meal} ->
+        Nutrition.update_macro_log(user_id, DateTime.to_date(meal.logged_at))
+        Nutrition.broadcast_meal_logged(user_id, meal)
+        Integrations.send_message(phone, "✅ Meal logged!")
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp maybe_persist_image_meal(_state), do: :ok
 
   defp finish_onboarding(state, ctx) do
     user = Accounts.get_user!(state.user_id)

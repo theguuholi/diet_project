@@ -585,6 +585,11 @@ defmodule DietProject.AccountsTest do
       assert Accounts.calculate_tdee(bmr, :moderate) == Float.round(bmr * 1.55, 1)
     end
 
+    test "active multiplier is 1.725" do
+      bmr = 1752.4
+      assert Accounts.calculate_tdee(bmr, :active) == Float.round(bmr * 1.725, 1)
+    end
+
     test "very_active multiplier is 1.725" do
       bmr = 1752.4
       assert Accounts.calculate_tdee(bmr, :very_active) == Float.round(bmr * 1.725, 1)

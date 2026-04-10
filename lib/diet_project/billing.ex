@@ -131,8 +131,14 @@ defmodule DietProject.Billing do
         {:error, :subscription_not_found}
 
       subscription ->
-        status = String.to_existing_atom(status_str)
-        update_subscription_status(subscription, status)
+        known = [:active, :trialing, :canceled, :past_due, :incomplete, :unpaid]
+        status = Enum.find(known, fn s -> Atom.to_string(s) == status_str end)
+
+        if status do
+          update_subscription_status(subscription, status)
+        else
+          {:error, :unknown_status}
+        end
     end
   end
 end
